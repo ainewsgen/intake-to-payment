@@ -67,6 +67,46 @@ export default function ProposalDetailPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
+    // Job Creation State
+    const [showJobForm, setShowJobForm] = useState(false);
+    const [newJobForm, setNewJobForm] = useState({ name: '', scope: '', deliverables: '', assumptions: '' });
+
+    // Estimate Creation State
+    const [estimateJobId, setEstimateJobId] = useState<string | null>(null);
+    const [newEstimateForm, setNewEstimateForm] = useState({ roleName: '', hours: '', hourlyRate: '' });
+
+    async function handleCreateJob(e: React.FormEvent) {
+        e.preventDefault();
+        setActionLoading(true);
+        const { name, scope, deliverables, assumptions } = newJobForm;
+        await fetch(`/api/v1/proposals/${params.id}/jobs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                scope,
+                deliverables: deliverables.split('\\n').filter(Boolean),
+                assumptions: assumptions.split('\\n').filter(Boolean)
+            }),
+        });
+        window.location.reload();
+    }
+
+    async function handleCreateEstimate(e: React.FormEvent, jobId: string) {
+        e.preventDefault();
+        setActionLoading(true);
+        await fetch(`/api/v1/jobs/${jobId}/estimates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                roleName: newEstimateForm.roleName,
+                hours: Number(newEstimateForm.hours),
+                hourlyRate: Number(newEstimateForm.hourlyRate)
+            }),
+        });
+        window.location.reload();
+    }
+
     useEffect(() => {
         async function load() {
             const res = await fetch(`/api/v1/proposals/${params.id}`);
@@ -146,10 +186,49 @@ export default function ProposalDetailPage() {
                     <div className={styles.mainCol}>
                         <div className={styles.sectionHeader}>
                             <h3>Jobs ({proposal.jobs.length})</h3>
-                            <span className={styles.totalAmount}>
-                                Total: {formatCurrency(proposal.totalAmount)}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+                                <span className={styles.totalAmount}>
+                                    Total: {formatCurrency(proposal.totalAmount)}
+                                </span>
+                                {proposal.status === 'DRAFT' && (
+                                    <button
+                                        className="btn btn-primary btn-sm"
+                                        onClick={() => setShowJobForm(!showJobForm)}
+                                    >
+                                        {showJobForm ? 'Cancel' : '+ Add Job'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
+
+                        {showJobForm && (
+                            <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+                                <h4>New Job</h4>
+                                <form onSubmit={handleCreateJob} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">Job Name</label>
+                                        <input className="input" value={newJobForm.name} onChange={e => setNewJobForm({ ...newJobForm, name: e.target.value })} required placeholder="e.g. Phase 1 - Discovery" />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Scope Description</label>
+                                        <textarea className="input" rows={3} value={newJobForm.scope} onChange={e => setNewJobForm({ ...newJobForm, scope: e.target.value })} />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+                                        <div className="form-group" style={{ flex: 1 }}>
+                                            <label className="form-label">Deliverables (one per line)</label>
+                                            <textarea className="input" rows={4} value={newJobForm.deliverables} onChange={e => setNewJobForm({ ...newJobForm, deliverables: e.target.value })} />
+                                        </div>
+                                        <div className="form-group" style={{ flex: 1 }}>
+                                            <label className="form-label">Assumptions (one per line)</label>
+                                            <textarea className="input" rows={4} value={newJobForm.assumptions} onChange={e => setNewJobForm({ ...newJobForm, assumptions: e.target.value })} />
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-2)' }}>
+                                        <button type="submit" className="btn btn-primary" disabled={actionLoading}>Add Job</button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
 
                         {proposal.jobs.length === 0 ? (
                             <div className="card">
@@ -202,6 +281,31 @@ export default function ProposalDetailPage() {
                                                     </tbody>
                                                 </table>
                                             </div>
+                                        )}
+
+                                        {proposal.status === 'DRAFT' && estimateJobId !== job.id && (
+                                            <button
+                                                className="btn btn-ghost btn-sm"
+                                                style={{ marginTop: 'var(--space-2)' }}
+                                                onClick={() => setEstimateJobId(job.id)}
+                                            >
+                                                + Add Role Segment
+                                            </button>
+                                        )}
+
+                                        {estimateJobId === job.id && (
+                                            <form
+                                                onSubmit={(e) => handleCreateEstimate(e, job.id)}
+                                                style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-3)', alignItems: 'flex-start' }}
+                                            >
+                                                <input className="input" style={{ flex: 2 }} placeholder="Role (e.g. Designer)" value={newEstimateForm.roleName} onChange={e => setNewEstimateForm({ ...newEstimateForm, roleName: e.target.value })} required />
+                                                <input className="input" type="number" style={{ flex: 1 }} step="0.5" min="0" placeholder="Hours" value={newEstimateForm.hours} onChange={e => setNewEstimateForm({ ...newEstimateForm, hours: e.target.value })} required />
+                                                <input className="input" type="number" style={{ flex: 1 }} step="0.01" min="0" placeholder="Rate/hr" value={newEstimateForm.hourlyRate} onChange={e => setNewEstimateForm({ ...newEstimateForm, hourlyRate: e.target.value })} required />
+                                                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                                    <button type="submit" className="btn btn-primary btn-sm" disabled={actionLoading}>Save</button>
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setEstimateJobId(null); setNewEstimateForm({ roleName: '', hours: '', hourlyRate: '' }); }}>Cancel</button>
+                                                </div>
+                                            </form>
                                         )}
 
                                         {/* Deliverables & Assumptions */}

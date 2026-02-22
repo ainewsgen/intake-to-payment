@@ -74,6 +74,7 @@ export default function ProjectDetailPage() {
     const router = useRouter();
     const [project, setProject] = useState<ProjectDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'jobs' | 'documents' | 'invoices'>('jobs');
 
     useEffect(() => {
@@ -90,6 +91,39 @@ export default function ProjectDetailPage() {
     function formatCurrency(n: number | null) {
         if (!n) return '—';
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+    }
+
+    async function handleCreateDraft() {
+        if (!project) return;
+        setActionLoading(true);
+
+        // Simple generation: one line item per job based on budget or actuals
+        const lineItems = project.projectJobs.map(pj => ({
+            description: `Services for: ${pj.job.name}`,
+            amount: pj.budgetAmount || 0,
+        })).filter(li => li.amount > 0);
+
+        const totalAmount = lineItems.reduce((s, li) => s + li.amount, 0);
+
+        await fetch('/api/v1/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                projectId: project.id,
+                lineItems,
+                totalAmount,
+                notes: 'Generated from project jobs',
+            }),
+        });
+
+        // Refresh
+        const res = await fetch(`/api/v1/projects/${params.id}`);
+        if (res.ok) {
+            const json = await res.json();
+            setProject(json.data);
+        }
+        setActiveTab('invoices');
+        setActionLoading(false);
     }
 
     if (loading) {
@@ -194,10 +228,10 @@ export default function ProjectDetailPage() {
                                     <div className={styles.burnBar}>
                                         <div
                                             className={`${styles.burnFill} ${(pj.burnPct || 0) > 90
-                                                    ? styles.burnDanger
-                                                    : (pj.burnPct || 0) > 70
-                                                        ? styles.burnWarning
-                                                        : ''
+                                                ? styles.burnDanger
+                                                : (pj.burnPct || 0) > 70
+                                                    ? styles.burnWarning
+                                                    : ''
                                                 }`}
                                             style={{ width: `${Math.min(pj.burnPct || 0, 100)}%` }}
                                         />
@@ -269,6 +303,11 @@ export default function ProjectDetailPage() {
                 {/* Invoices Tab */}
                 {activeTab === 'invoices' && (
                     <div className="card">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleCreateDraft} disabled={actionLoading}>
+                                + Generate Draft
+                            </button>
+                        </div>
                         {project.invoices.length === 0 ? (
                             <div className="empty-state">
                                 <div className="empty-state-icon">🧾</div>

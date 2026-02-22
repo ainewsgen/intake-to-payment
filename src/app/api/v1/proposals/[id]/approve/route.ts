@@ -59,6 +59,11 @@ export async function POST(
 
         // If approved, create project
         if (status === 'APPROVED') {
+            const proposalJobs = await prisma.job.findMany({
+                where: { proposalId: id },
+                include: { estimates: true },
+            });
+
             const project = await prisma.project.create({
                 data: {
                     tenantId: ctx.tenantId,
@@ -68,15 +73,15 @@ export async function POST(
                     pmUserId: ctx.userId,
                     status: 'ACTIVE',
                     projectJobs: {
-                        create: await prisma.job
-                            .findMany({ where: { proposalId: id } })
-                            .then((jobs) =>
-                                jobs.map((job) => ({
-                                    jobId: job.id,
-                                    budgetAmount: job.lineTotal,
-                                    status: 'NOT_STARTED' as const,
-                                }))
-                            ),
+                        create: proposalJobs.map((job) => {
+                            const totalHours = job.estimates.reduce((sum, est) => sum + Number(est.hours || 0), 0);
+                            return {
+                                jobId: job.id,
+                                budgetAmount: job.lineTotal,
+                                budgetHours: totalHours,
+                                status: 'NOT_STARTED' as const,
+                            };
+                        }),
                     },
                 },
             });

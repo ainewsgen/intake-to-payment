@@ -4,18 +4,17 @@ import { useState, useEffect, useCallback } from 'react';
 import styles from './rate-cards.module.css';
 
 interface RateItem {
-    roleTitle: string;
-    hourlyRateCents: number;
+    roleName: string;
+    hourlyRate: number;
     currency: string;
 }
 
 interface RateCard {
     id: string;
     name: string;
-    effectiveFrom: string;
-    effectiveTo: string | null;
+    effectiveDate: string;
     isActive: boolean;
-    rates: RateItem[];
+    lines: RateItem[];
     createdAt: string;
 }
 
@@ -26,8 +25,8 @@ export default function RateCardsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [form, setForm] = useState({
         name: '',
-        effectiveFrom: new Date().toISOString().slice(0, 10),
-        rates: [{ roleTitle: '', hourlyRateCents: 0, currency: 'USD' }],
+        effectiveDate: new Date().toISOString().slice(0, 10),
+        lines: [{ roleName: '', hourlyRate: 0, currency: 'USD' }],
     });
     const [formLoading, setFormLoading] = useState(false);
 
@@ -48,21 +47,21 @@ export default function RateCardsPage() {
     function addRateRow() {
         setForm(f => ({
             ...f,
-            rates: [...f.rates, { roleTitle: '', hourlyRateCents: 0, currency: 'USD' }],
+            lines: [...f.lines, { roleName: '', hourlyRate: 0, currency: 'USD' }],
         }));
     }
 
     function removeRateRow(idx: number) {
         setForm(f => ({
             ...f,
-            rates: f.rates.filter((_, i) => i !== idx),
+            lines: f.lines.filter((_, i) => i !== idx),
         }));
     }
 
     function updateRate(idx: number, field: string, value: string | number) {
         setForm(f => ({
             ...f,
-            rates: f.rates.map((r, i) => i === idx ? { ...r, [field]: value } : r),
+            lines: f.lines.map((r, i) => i === idx ? { ...r, [field]: value } : r),
         }));
     }
 
@@ -75,7 +74,7 @@ export default function RateCardsPage() {
             body: JSON.stringify(form),
         });
         setShowCreate(false);
-        setForm({ name: '', effectiveFrom: new Date().toISOString().slice(0, 10), rates: [{ roleTitle: '', hourlyRateCents: 0, currency: 'USD' }] });
+        setForm({ name: '', effectiveDate: new Date().toISOString().slice(0, 10), lines: [{ roleName: '', hourlyRate: 0, currency: 'USD' }] });
         setFormLoading(false);
         fetchCards();
     }
@@ -109,8 +108,8 @@ export default function RateCardsPage() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Effective From</label>
-                                    <input className="input" type="date" value={form.effectiveFrom}
-                                        onChange={(e) => setForm(f => ({ ...f, effectiveFrom: e.target.value }))} required />
+                                    <input className="input" type="date" value={form.effectiveDate}
+                                        onChange={(e) => setForm(f => ({ ...f, effectiveDate: e.target.value }))} required />
                                 </div>
                             </div>
 
@@ -121,13 +120,13 @@ export default function RateCardsPage() {
                                         + Add Role
                                     </button>
                                 </div>
-                                {form.rates.map((rate, idx) => (
+                                {form.lines.map((rate, idx) => (
                                     <div key={idx} className={styles.rateRow}>
                                         <input
                                             className="input"
                                             placeholder="Role title (e.g. Senior Engineer)"
-                                            value={rate.roleTitle}
-                                            onChange={(e) => updateRate(idx, 'roleTitle', e.target.value)}
+                                            value={rate.roleName}
+                                            onChange={(e) => updateRate(idx, 'roleName', e.target.value)}
                                             required
                                         />
                                         <div className={styles.rateInput}>
@@ -138,13 +137,13 @@ export default function RateCardsPage() {
                                                 step="0.01"
                                                 min="0"
                                                 placeholder="0.00"
-                                                value={rate.hourlyRateCents ? (rate.hourlyRateCents / 100).toFixed(2) : ''}
-                                                onChange={(e) => updateRate(idx, 'hourlyRateCents', Math.round(parseFloat(e.target.value || '0') * 100))}
+                                                value={rate.hourlyRate ? (rate.hourlyRate / 100).toFixed(2) : ''}
+                                                onChange={(e) => updateRate(idx, 'hourlyRate', Math.round(parseFloat(e.target.value || '0') * 100))}
                                                 required
                                             />
                                             <span className={styles.rateUnit}>/hr</span>
                                         </div>
-                                        {form.rates.length > 1 && (
+                                        {form.lines.length > 1 && (
                                             <button type="button" className={styles.removeBtn} onClick={() => removeRateRow(idx)}>✕</button>
                                         )}
                                     </div>
@@ -180,12 +179,11 @@ export default function RateCardsPage() {
                                     <div className={styles.cardInfo}>
                                         <h3>{card.name}</h3>
                                         <div className={styles.cardMeta}>
-                                            Effective {new Date(card.effectiveFrom).toLocaleDateString()}
-                                            {card.effectiveTo && ` → ${new Date(card.effectiveTo).toLocaleDateString()}`}
+                                            Effective {new Date(card.effectiveDate).toLocaleDateString()}
                                         </div>
                                     </div>
                                     <div className={styles.cardRight}>
-                                        <span className={styles.rateCount}>{card.rates.length} roles</span>
+                                        <span className={styles.rateCount}>{card.lines.length} roles</span>
                                         <span className={`badge badge-${card.isActive ? 'completed' : 'draft'}`}>
                                             {card.isActive ? 'Active' : 'Inactive'}
                                         </span>
@@ -204,10 +202,10 @@ export default function RateCardsPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {card.rates.map((rate, idx) => (
+                                                {card.lines.map((rate, idx) => (
                                                     <tr key={idx}>
-                                                        <td>{rate.roleTitle}</td>
-                                                        <td className={styles.rateValue}>{formatRate(rate.hourlyRateCents)}</td>
+                                                        <td>{rate.roleName}</td>
+                                                        <td className={styles.rateValue}>{formatRate(rate.hourlyRate)}</td>
                                                         <td>{rate.currency}</td>
                                                     </tr>
                                                 ))}
