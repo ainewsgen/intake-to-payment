@@ -13,47 +13,37 @@ interface NavItem {
 
 const navSections: { label: string; items: NavItem[] }[] = [
     {
-        label: 'Overview',
+        label: 'My Workspace',
         items: [
-            { label: 'Dashboard', href: '/dashboard', icon: '📊' },
+            { label: 'Action Inbox', href: '/dashboard', icon: '⚡' },
+            { label: 'My Time Tracker', href: '/time', icon: '⏱️' },
         ],
     },
     {
-        label: 'Proposals',
+        label: 'Engagements',
         items: [
+            { label: 'Clients 360', href: '/clients', icon: '🤝' },
             { label: 'Requests', href: '/requests', icon: '📥' },
             { label: 'Proposals', href: '/proposals', icon: '📝' },
+            { label: 'Active Projects', href: '/projects', icon: '📁' },
+        ],
+    },
+    {
+        label: 'Finance & Operations',
+        items: [
+            { label: 'Time & Approvals', href: '/time/review', icon: '✅' },
             { label: 'Rate Cards', href: '/rate-cards', icon: '💰' },
+            { label: 'Billing & Invoices', href: '/billing', icon: '🧾' },
+            { label: 'Payroll Runs', href: '/payroll', icon: '💳' },
         ],
     },
     {
-        label: 'Delivery',
-        items: [
-            { label: 'Projects', href: '/projects', icon: '📁' },
-            { label: 'Time Tracking', href: '/time', icon: '⏱️' },
-            { label: 'Review Queue', href: '/time/review', icon: '✅' },
-        ],
-    },
-    {
-        label: 'Finance',
-        items: [
-            { label: 'Billing', href: '/billing', icon: '🧾' },
-            { label: 'Payroll', href: '/payroll', icon: '💳' },
-        ],
-    },
-    {
-        label: 'Admin',
+        label: 'Platform Administration',
         items: [
             { label: 'Reports', href: '/reports', icon: '📊' },
+            { label: 'Global Settings', href: '/settings/organization', icon: '⚙️' },
+            { label: 'Users & Roles', href: '/settings/users', icon: '👥' },
             { label: 'Audit Log', href: '/audit', icon: '📋' },
-        ],
-    },
-    {
-        label: 'Settings',
-        items: [
-            { label: 'Organization', href: '/settings/organization', icon: '🏢' },
-            { label: 'Users', href: '/settings/users', icon: '👥' },
-            { label: 'Integrations', href: '/settings/integrations', icon: '🔗' },
         ],
     },
 ];
