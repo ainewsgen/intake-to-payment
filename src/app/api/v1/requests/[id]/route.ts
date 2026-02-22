@@ -60,9 +60,9 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { title, clientName, clientAccountId, notes, status } = body;
+    const { title, clientName, clientAccountId, notes, status, declineReason } = body;
 
-    const validStatuses = ['NEW', 'PROPOSAL_CREATED', 'CONVERTED', 'ARCHIVED'];
+    const validStatuses = ['NEW', 'IN_PROGRESS', 'PROPOSAL_CREATED', 'CLOSED'];
     if (status && !validStatuses.includes(status)) {
         return apiError(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
@@ -81,6 +81,7 @@ export async function PATCH(
     if (clientAccountId !== undefined) updateData.clientAccountId = clientAccountId;
     if (notes !== undefined) updateData.notes = notes;
     if (status !== undefined) updateData.status = status;
+    if (declineReason !== undefined) updateData.declineReason = declineReason;
 
     // Use updateMany trick to enforce tenantId scoping in the actual SQL query
     const [updated] = await prisma.$transaction([
@@ -97,6 +98,12 @@ export async function PATCH(
         existing as unknown as Record<string, unknown>,
         updated as unknown as Record<string, unknown>
     );
+
+    // If declining, mock sending a decline email
+    if (status === 'CLOSED' && declineReason && existing.status !== 'CLOSED') {
+        console.log(`[EMAIL MOCK] Sending decline notice to client for request ${id}. Reason: ${declineReason}`);
+        afterDiff.emailSent = true;
+    }
 
     await logAuditEvent(
         getAuditContext(ctx.tenantId, ctx.userId, 'INTERNAL', getClientIp(req)),

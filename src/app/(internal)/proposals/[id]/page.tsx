@@ -143,6 +143,18 @@ export default function ProposalDetailPage() {
         window.location.reload();
     }
 
+    async function handleRevise() {
+        setActionLoading(true);
+        await fetch(`/api/v1/proposals/${params.id}/revise`, { method: 'POST' });
+        window.location.reload();
+    }
+
+    async function handleSendToClient() {
+        setActionLoading(true);
+        await fetch(`/api/v1/proposals/${params.id}/send`, { method: 'POST' });
+        window.location.reload();
+    }
+
     if (loading) {
         return (
             <div className="page-body">
@@ -173,6 +185,16 @@ export default function ProposalDetailPage() {
                         </p>
                     </div>
                     <div className={styles.headerActions}>
+                        {proposal.status === 'REJECTED' && (
+                            <button className="btn btn-ghost" onClick={handleRevise} disabled={actionLoading}>
+                                ↺ Revise Proposal
+                            </button>
+                        )}
+                        {proposal.status === 'PENDING_APPROVAL' && (
+                            <button className="btn btn-primary" onClick={handleSendToClient} disabled={actionLoading}>
+                                ↗ Send to Client
+                            </button>
+                        )}
                         <span className={`badge badge-${STATUS_COLORS[proposal.status]} badge-lg`}>
                             {proposal.status.replace(/_/g, ' ')}
                         </span>

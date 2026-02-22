@@ -11,6 +11,7 @@ interface RequestDetail {
     title: string;
     clientName: string | null;
     status: string;
+    declineReason: string | null;
     notes: string | null;
     createdAt: string;
     createdBy: { id: string; firstName: string; lastName: string };
@@ -44,6 +45,9 @@ export default function RequestDetailPage() {
     const [request, setRequest] = useState<RequestDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
+    const [showDeclineModal, setShowDeclineModal] = useState(false);
+    const [declineReason, setDeclineReason] = useState('');
+    const [declining, setDeclining] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -81,6 +85,27 @@ export default function RequestDetailPage() {
         }
     }
 
+    async function handleDecline() {
+        if (!request || !declineReason) return;
+        setDeclining(true);
+        try {
+            const res = await fetch(`/api/v1/requests/${params.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'CLOSED',
+                    declineReason: declineReason
+                }),
+            });
+            if (res.ok) {
+                setShowDeclineModal(false);
+                window.location.reload();
+            }
+        } finally {
+            setDeclining(false);
+        }
+    }
+
     if (loading) {
         return (
             <div className="page-body">
@@ -110,13 +135,23 @@ export default function RequestDetailPage() {
                         </p>
                     </div>
                     <div className={styles.headerActions}>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleCreateProposal}
-                            disabled={creating}
-                        >
-                            {creating ? 'Creating...' : '+ Create Proposal'}
-                        </button>
+                        {request.status !== 'CLOSED' && (
+                            <>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => setShowDeclineModal(true)}
+                                >
+                                    Decline to Bid
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleCreateProposal}
+                                    disabled={creating}
+                                >
+                                    {creating ? 'Creating...' : '+ Create Proposal'}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -128,6 +163,12 @@ export default function RequestDetailPage() {
                         {/* Notes */}
                         <div className="card">
                             <h3 className={styles.sectionTitle}>Details</h3>
+                            {request.status === 'CLOSED' && request.declineReason && (
+                                <div style={{ marginBottom: 'var(--space-4)', padding: 'var(--space-4)', backgroundColor: 'var(--surface-sunken)', borderRadius: 'var(--radius-md)', borderLeft: '4px solid var(--error-main)' }}>
+                                    <strong style={{ display: 'block', marginBottom: 'var(--space-2)', color: 'var(--error-main)' }}>Declined to Bid</strong>
+                                    <p style={{ margin: 0 }}>{request.declineReason}</p>
+                                </div>
+                            )}
                             {request.notes ? (
                                 <div className={styles.notes}>{request.notes}</div>
                             ) : (
@@ -220,6 +261,39 @@ export default function RequestDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {showDeclineModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999
+                }} onClick={() => setShowDeclineModal(false)}>
+                    <div className="card" style={{ width: 400, maxWidth: '90%' }} onClick={e => e.stopPropagation()}>
+                        <h3 className={styles.sectionTitle}>Decline Request</h3>
+                        <p style={{ marginBottom: 'var(--space-4)', color: 'var(--text-secondary)' }}>
+                            Please provide a reason for declining this request. This will be sent to the client.
+                        </p>
+                        <textarea
+                            className="input"
+                            rows={4}
+                            placeholder="Reason for declining..."
+                            value={declineReason}
+                            onChange={(e) => setDeclineReason(e.target.value)}
+                            style={{ marginBottom: 'var(--space-4)' }}
+                        />
+                        <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost" onClick={() => setShowDeclineModal(false)}>Cancel</button>
+                            <button className="btn btn-danger" onClick={handleDecline} disabled={!declineReason || declining}>
+                                {declining ? 'Declining...' : 'Decline & Notify'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
