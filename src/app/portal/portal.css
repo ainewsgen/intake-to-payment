@@ -1,0 +1,121 @@
+.portal-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.portal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-6);
+    height: 64px;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.portal-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.portal-logo {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.portal-brand-name {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.portal-nav {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.portal-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.portal-nav-link:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+}
+
+.portal-nav-link.active {
+    color: var(--color-accent);
+    background: var(--color-accent-subtle);
+}
+
+.portal-user {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.portal-user-name {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.portal-main {
+    flex: 1;
+    padding: var(--space-6);
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.portal-loading {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .portal-header {
+        flex-wrap: wrap;
+        height: auto;
+        padding: var(--space-3);
+        gap: var(--space-3);
+    }
+
+    .portal-nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+    }
+}

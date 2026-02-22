@@ -1,0 +1,744 @@
+// Intake-to-Payment Platform — Prisma Schema
+// Multi-tenant data model with audit trail
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Tenancy & Auth
+// ─────────────────────────────────────────────
+
+model Tenant {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  logoUrl        String?
+  primaryColor   String   @default("#2563eb")
+  secondaryColor String   @default("#1e40af")
+  fontFamily     String   @default("Inter")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users          User[]
+  clientAccounts ClientAccount[]
+  rateCards      RateCard[]
+  requests       Request[]
+  proposals      Proposal[]
+  projects       Project[]
+  auditEvents    AuditEvent[]
+  contractorPayRates ContractorPayRate[]
+  contractorPayRuns  ContractorPayRun[]
+  fxRateLogs     FxRateLog[]
+
+  @@map("tenants")
+}
+
+enum UserRole {
+  ADMIN
+  ESTIMATOR
+  PM
+  FINANCE
+  EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  requestsCreated     Request[]      @relation("RequestCreator")
+  proposalApprovals   Approval[]     @relation("Approver")
+  projectsManaged     Project[]      @relation("ProjectManager")
+  assignments         Assignment[]
+  timeEntries         TimeEntry[]
+  invoiceDraftsCreated InvoiceDraft[] @relation("InvoiceDraftCreator")
+  invoiceDraftsApproved InvoiceDraft[] @relation("InvoiceDraftApprover")
+  otApprovalsRequested  OTApproval[]  @relation("OTRequester")
+  otApprovalsApproved   OTApproval[]  @relation("OTApproverUser")
+  payRunsCreated      ContractorPayRun[] @relation("PayRunCreator")
+  payRunsApproved     ContractorPayRun[] @relation("PayRunApprover")
+  contractorPayRates  ContractorPayRate[]
+  contractorPayLines  ContractorPayLine[]
+
+  @@unique([tenantId, email])
+  @@map("users")
+}
+
+model ClientAccount {
+  id             String   @id @default(cuid())
+  tenantId       String
+  name           String
+  qboCustomerId  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  clientUsers    ClientUser[]
+  projects       Project[]
+  requests       Request[]
+
+  @@map("client_accounts")
+}
+
+model ClientUser {
+  id              String   @id @default(cuid())
+  clientAccountId String
+  email           String
+  passwordHash    String
+  firstName       String
+  lastName        String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id])
+
+  @@unique([clientAccountId, email])
+  @@map("client_users")
+}
+
+// ─────────────────────────────────────────────
+// Proposal Lifecycle
+// ─────────────────────────────────────────────
+
+enum RequestSource {
+  EMAIL
+  PHONE
+  UPLOAD
+  MANUAL
+}
+
+enum RequestStatus {
+  NEW
+  IN_PROGRESS
+  PROPOSAL_CREATED
+  CLOSED
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  tenantId        String
+  source          RequestSource
+  title           String
+  clientAccountId String?
+  clientName      String?
+  notes           String?       @db.Text
+  status          RequestStatus @default(NEW)
+  createdById     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  createdBy       User          @relation("RequestCreator", fields: [createdById], references: [id])
+  clientAccount   ClientAccount? @relation(fields: [clientAccountId], references: [id])
+  attachments     RequestAttachment[]
+  proposals       Proposal[]
+
+  @@map("requests")
+}
+
+model RequestAttachment {
+  id        String   @id @default(cuid())
+  requestId String
+  fileName  String
+  s3Key     String
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("request_attachments")
+}
+
+enum PricingModel {
+  FIXED_PER_JOB
+  MONTHLY_ACTUALS
+  HYBRID
+}
+
+enum ProposalStatus {
+  DRAFT
+  PENDING_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+model Proposal {
+  id           String         @id @default(cuid())
+  tenantId     String
+  requestId    String
+  version      Int            @default(1)
+  status       ProposalStatus @default(DRAFT)
+  pricingModel PricingModel   @default(FIXED_PER_JOB)
+  totalAmount  Decimal?       @db.Decimal(12, 2)
+  notes        String?        @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  request      Request        @relation(fields: [requestId], references: [id])
+  jobs         Job[]
+  approvals    Approval[]
+  projects     Project[]
+
+  @@unique([requestId, version])
+  @@map("proposals")
+}
+
+model Job {
+  id           String   @id @default(cuid())
+  proposalId   String
+  name         String
+  scope        String?  @db.Text
+  assumptions  String[] @default([])
+  deliverables String[] @default([])
+  sortOrder    Int      @default(0)
+  lineTotal    Decimal? @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  proposal     Proposal      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  estimates    JobEstimate[]
+  projectJobs  ProjectJob[]
+
+  @@map("jobs")
+}
+
+model JobEstimate {
+  id         String  @id @default(cuid())
+  jobId      String
+  employeeId String?
+  roleName   String
+  hours      Decimal @db.Decimal(8, 2)
+  hourlyRate Decimal @db.Decimal(8, 2)
+  lineTotal  Decimal @db.Decimal(12, 2)
+
+  job        Job     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("job_estimates")
+}
+
+// ─────────────────────────────────────────────
+// Rate Cards
+// ─────────────────────────────────────────────
+
+model RateCard {
+  id            String   @id @default(cuid())
+  tenantId      String
+  version       Int      @default(1)
+  name          String
+  effectiveDate DateTime
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  lines         RateCardLine[]
+
+  @@map("rate_cards")
+}
+
+model RateCardLine {
+  id         String  @id @default(cuid())
+  rateCardId String
+  roleName   String
+  employeeId String?
+  hourlyRate Decimal @db.Decimal(8, 2)
+  currency   String  @default("USD")
+
+  rateCard   RateCard @relation(fields: [rateCardId], references: [id], onDelete: Cascade)
+
+  @@map("rate_card_lines")
+}
+
+// ─────────────────────────────────────────────
+// Approvals
+// ─────────────────────────────────────────────
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalType {
+  INTERNAL_REVIEW
+  CLIENT_APPROVAL
+}
+
+model Approval {
+  id            String         @id @default(cuid())
+  proposalId    String
+  type          ApprovalType
+  status        ApprovalStatus @default(PENDING)
+  approvedById  String?
+  termsAccepted Boolean        @default(false)
+  notes         String?        @db.Text
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  proposal      Proposal       @relation(fields: [proposalId], references: [id])
+  approvedBy    User?          @relation("Approver", fields: [approvedById], references: [id])
+
+  @@map("approvals")
+}
+
+// ─────────────────────────────────────────────
+// Delivery
+// ─────────────────────────────────────────────
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  tenantId        String
+  proposalId      String
+  clientAccountId String
+  name            String
+  status          ProjectStatus @default(ACTIVE)
+  pmUserId        String
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  proposal        Proposal      @relation(fields: [proposalId], references: [id])
+  clientAccount   ClientAccount @relation(fields: [clientAccountId], references: [id])
+  pmUser          User          @relation("ProjectManager", fields: [pmUserId], references: [id])
+  projectJobs     ProjectJob[]
+  documents       Document[]
+  invoiceDrafts   InvoiceDraft[]
+  invoices        Invoice[]
+
+  @@map("projects")
+}
+
+enum ProjectJobStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+}
+
+model ProjectJob {
+  id           String           @id @default(cuid())
+  projectId    String
+  jobId        String
+  budgetAmount Decimal?         @db.Decimal(12, 2)
+  budgetHours  Decimal?         @db.Decimal(8, 2)
+  status       ProjectJobStatus @default(NOT_STARTED)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  job          Job              @relation(fields: [jobId], references: [id])
+  milestones   Milestone[]
+  assignments  Assignment[]
+  timeEntries  TimeEntry[]
+  jobBurnups   JobBurnup[]
+
+  @@map("project_jobs")
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model Milestone {
+  id            String          @id @default(cuid())
+  projectJobId  String
+  name          String
+  description   String?         @db.Text
+  dueDate       DateTime?
+  status        MilestoneStatus @default(PENDING)
+  completedDate DateTime?
+  invoicePct    Decimal?        @db.Decimal(5, 2)
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  projectJob    ProjectJob      @relation(fields: [projectJobId], references: [id], onDelete: Cascade)
+
+  @@map("milestones")
+}
+
+enum DocumentType {
+  DELIVERABLE
+  CONTRACT
+  REFERENCE
+  OTHER
+}
+
+model Document {
+  id           String       @id @default(cuid())
+  projectId    String
+  projectJobId String?
+  milestoneId  String?
+  fileName     String
+  s3Key        String
+  mimeType     String
+  sizeBytes    Int
+  type         DocumentType @default(OTHER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  project      Project      @relation(fields: [projectId], references: [id])
+
+  @@map("documents")
+}
+
+enum AssignmentType {
+  EMPLOYEE
+  CONTRACTOR
+}
+
+model Assignment {
+  id           String         @id @default(cuid())
+  projectJobId String
+  userId       String
+  type         AssignmentType
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  projectJob   ProjectJob     @relation(fields: [projectJobId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id])
+  otApprovals  OTApproval[]
+
+  @@map("assignments")
+}
+
+enum OTApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model OTApproval {
+  id              String           @id @default(cuid())
+  assignmentId    String
+  requestedHours  Decimal          @db.Decimal(8, 2)
+  reason          String?          @db.Text
+  status          OTApprovalStatus @default(PENDING)
+  requestedById   String
+  approvedById    String?
+  approvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  assignment      Assignment       @relation(fields: [assignmentId], references: [id])
+  requestedBy     User             @relation("OTRequester", fields: [requestedById], references: [id])
+  approvedBy      User?            @relation("OTApproverUser", fields: [approvedById], references: [id])
+
+  @@map("ot_approvals")
+}
+
+// ─────────────────────────────────────────────
+// Time & Billing & Payroll
+// ─────────────────────────────────────────────
+
+enum TimeEntrySource {
+  TIME_DOCTOR
+  CSV_IMPORT
+  MANUAL
+}
+
+model TimeEntry {
+  id           String          @id @default(cuid())
+  projectJobId String
+  userId       String
+  date         DateTime        @db.Date
+  hours        Decimal         @db.Decimal(6, 2)
+  source       TimeEntrySource
+  tdEntryId    String?
+  notes        String?         @db.Text
+  approved     Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  projectJob   ProjectJob      @relation(fields: [projectJobId], references: [id])
+  user         User            @relation(fields: [userId], references: [id])
+
+  @@unique([tdEntryId])
+  @@map("time_entries")
+}
+
+model JobBurnup {
+  id           String     @id @default(cuid())
+  projectJobId String
+  date         DateTime   @db.Date
+  totalHours   Decimal    @db.Decimal(8, 2)
+  budgetHours  Decimal    @db.Decimal(8, 2)
+  burnPct      Decimal    @db.Decimal(5, 2)
+  createdAt    DateTime   @default(now())
+
+  projectJob   ProjectJob @relation(fields: [projectJobId], references: [id])
+
+  @@unique([projectJobId, date])
+  @@map("job_burnups")
+}
+
+enum InvoiceDraftStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+model InvoiceDraft {
+  id           String             @id @default(cuid())
+  projectId    String
+  lineItems    Json
+  totalAmount  Decimal            @db.Decimal(12, 2)
+  status       InvoiceDraftStatus @default(DRAFT)
+  notes        String?            @db.Text
+  createdById  String
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  project      Project            @relation(fields: [projectId], references: [id])
+  createdBy    User               @relation("InvoiceDraftCreator", fields: [createdById], references: [id])
+  approvedBy   User?              @relation("InvoiceDraftApprover", fields: [approvedById], references: [id])
+  invoice      Invoice?
+
+  @@map("invoice_drafts")
+}
+
+enum InvoiceStatus {
+  PENDING
+  SENT
+  SYNCED_TO_QBO
+  PAID
+  VOIDED
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  projectId      String
+  invoiceDraftId String?       @unique
+  qboInvoiceId   String?
+  invoiceNumber  String?
+  amount         Decimal       @db.Decimal(12, 2)
+  currency       String        @default("USD")
+  status         InvoiceStatus @default(PENDING)
+  issuedDate     DateTime?
+  dueDate        DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  project        Project       @relation(fields: [projectId], references: [id])
+  invoiceDraft   InvoiceDraft? @relation(fields: [invoiceDraftId], references: [id])
+  payments       Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  invoiceId    String
+  qboPaymentId String?
+  amount       Decimal  @db.Decimal(12, 2)
+  paidDate     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  invoice      Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// Contractor Payroll
+// ─────────────────────────────────────────────
+
+model ContractorPayRate {
+  id            String   @id @default(cuid())
+  tenantId      String
+  userId        String
+  hourlyRate    Decimal  @db.Decimal(8, 2)
+  currency      String   @default("USD")
+  effectiveDate DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("contractor_pay_rates")
+}
+
+enum PayRunStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  EXPORTED
+}
+
+model ContractorPayRun {
+  id           String       @id @default(cuid())
+  tenantId     String
+  periodStart  DateTime     @db.Date
+  periodEnd    DateTime     @db.Date
+  status       PayRunStatus @default(DRAFT)
+  createdById  String
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  createdBy    User         @relation("PayRunCreator", fields: [createdById], references: [id])
+  approvedBy   User?        @relation("PayRunApprover", fields: [approvedById], references: [id])
+  lines        ContractorPayLine[]
+  batchFiles   WiseBatchFile[]
+
+  @@map("contractor_pay_runs")
+}
+
+model ContractorPayLine {
+  id          String   @id @default(cuid())
+  payRunId    String
+  userId      String
+  hours       Decimal  @db.Decimal(8, 2)
+  rate        Decimal  @db.Decimal(8, 2)
+  currency    String
+  fxRate      Decimal? @db.Decimal(12, 6)
+  fxSource    String?
+  allowances  Decimal  @default(0) @db.Decimal(10, 2)
+  bonuses     Decimal  @default(0) @db.Decimal(10, 2)
+  totalAmount Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+
+  payRun      ContractorPayRun @relation(fields: [payRunId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id])
+
+  @@map("contractor_pay_lines")
+}
+
+model WiseBatchFile {
+  id          String   @id @default(cuid())
+  payRunId    String
+  format      String   @default("CSV")
+  s3Key       String
+  generatedAt DateTime @default(now())
+
+  payRun      ContractorPayRun @relation(fields: [payRunId], references: [id])
+
+  @@map("wise_batch_files")
+}
+
+// ─────────────────────────────────────────────
+// Audit & Governance
+// ─────────────────────────────────────────────
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AuditEvent {
+  id         String      @id @default(cuid())
+  tenantId   String
+  entityType String
+  entityId   String
+  action     AuditAction
+  userId     String?
+  userType   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  timestamp  DateTime    @default(now())
+  retainUntil DateTime?
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, timestamp])
+  @@map("audit_events")
+}
+
+model FxRateLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  source       String
+  baseCurrency String
+  rates        Json
+  fetchedAt    DateTime @default(now())
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("fx_rate_logs")
+}
+
+// ─────────────────────────────────────────────
+// QBO Integration State
+// ─────────────────────────────────────────────
+
+model QboConnection {
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  realmId      String
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  tokenExpiry  DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("qbo_connections")
+}
+
+// ─────────────────────────────────────────────
+// Time Doctor Integration State
+// ─────────────────────────────────────────────
+
+model TimeDoctorConnection {
+  id            String   @id @default(cuid())
+  tenantId      String   @unique
+  apiToken      String   @db.Text
+  lastSyncCursor DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("time_doctor_connections")
+}
+
+model TimeDoctorMapping {
+  id             String @id @default(cuid())
+  tenantId       String
+  tdProjectId    String?
+  tdTaskId       String?
+  projectJobId   String
+
+  @@unique([tenantId, tdProjectId, tdTaskId])
+  @@map("time_doctor_mappings")
+}

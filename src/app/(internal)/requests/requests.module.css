@@ -1,0 +1,34 @@
+.filters {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.titleLink {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+}
+
+.titleLink:hover {
+    color: var(--color-accent);
+}
+
+.date {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+}
+
+.pageInfo {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}

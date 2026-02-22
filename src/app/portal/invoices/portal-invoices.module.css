@@ -1,0 +1,49 @@
+.outstandingBanner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-5);
+    background: linear-gradient(135deg, var(--color-accent-subtle), transparent);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+}
+
+.outstandingAmount {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono);
+}
+
+.invoiceNum {
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono);
+}
+
+.amount {
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-mono);
+}
+
+.overdue {
+    color: var(--color-error);
+    font-weight: var(--font-weight-semibold);
+}
+
+.due-soon {
+    color: var(--color-warning);
+    font-weight: var(--font-weight-medium);
+}
+
+.paymentCount {
+    font-size: var(--text-xs);
+    color: var(--color-success);
+    font-weight: var(--font-weight-medium);
+}
+
+.noPay {
+    color: var(--color-text-muted);
+}

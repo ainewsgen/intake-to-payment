@@ -1,0 +1,117 @@
+.proposalList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.proposalCard {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.proposalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.proposalHeader:hover {
+    background: var(--color-bg-card-hover);
+}
+
+.proposalInfo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.proposalInfo h3 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+.versionTag {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    background: var(--color-bg-tertiary);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.proposalMeta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.proposalAmount {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+    font-family: var(--font-mono);
+}
+
+.expandArrow {
+    font-size: 10px;
+    color: var(--color-text-muted);
+}
+
+.proposalBody {
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-5);
+}
+
+.sectionLabel {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+}
+
+.jobList {
+    margin-bottom: var(--space-4);
+}
+
+.jobItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-1);
+    font-size: var(--text-sm);
+}
+
+.jobAmount {
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-semibold);
+}
+
+.approvalActions {
+    padding: var(--space-4);
+    background: var(--color-accent-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+}
+
+.approvalText {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-3);
+}
+
+.approvalButtons {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.proposalDate {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}

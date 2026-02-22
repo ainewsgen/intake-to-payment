@@ -1,0 +1,41 @@
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.selectedInfo {
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    font-weight: var(--font-weight-semibold);
+    min-width: 120px;
+    text-align: right;
+}
+
+.selectedRow {
+    background: var(--color-accent-subtle) !important;
+}
+
+.nameCell {
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+}
+
+.dateCell {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+}
+
+.hoursCell {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-weight: var(--font-weight-bold);
+}
+
+.notesCell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--color-text-muted);
+}
