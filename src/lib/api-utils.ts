@@ -102,9 +102,11 @@ export function apiSuccess<T>(data: T, status: number = 200): NextResponse {
     try {
         const json = JSON.stringify(data, (_key, value) => {
             if (value !== null && typeof value === 'object') {
-                // Handle Prisma Decimal objects
+                // Safe check for Prisma Decimal (decimal.js)
                 if (value.constructor?.name === 'Decimal' ||
-                    (value.hasOwnProperty('d') && value.hasOwnProperty('s') && value.hasOwnProperty('e'))) {
+                    (Object.prototype.hasOwnProperty.call(value, 'd') &&
+                        Object.prototype.hasOwnProperty.call(value, 's') &&
+                        Object.prototype.hasOwnProperty.call(value, 'e'))) {
                     return Number(value);
                 }
             }
