@@ -96,34 +96,32 @@ export function apiError(
 
 /**
  * Standard JSON success response.
- * Handles Decimal serialization by converting them to numbers.
+ * Handles Decimal serialization by converting them to numbers via JSON.stringify replacer.
  */
 export function apiSuccess<T>(data: T, status: number = 200): NextResponse {
-    // Recursive function to find and convert Prisma Decimal objects
-    const serialize = (obj: any): any => {
-        if (obj === null || obj === undefined) return obj;
-
-        // Handle Prisma Decimal objects (which have a "toFixed" method and are objects)
-        if (typeof obj === 'object' && obj.constructor?.name === 'Decimal' || (obj.d && obj.s && obj.e)) {
-            return Number(obj);
-        }
-
-        if (Array.isArray(obj)) {
-            return obj.map(serialize);
-        }
-
-        if (typeof obj === 'object') {
-            const result: any = {};
-            for (const key in obj) {
-                result[key] = serialize(obj[key]);
+    try {
+        const json = JSON.stringify(data, (_key, value) => {
+            if (value !== null && typeof value === 'object') {
+                // Handle Prisma Decimal objects
+                if (value.constructor?.name === 'Decimal' ||
+                    (value.hasOwnProperty('d') && value.hasOwnProperty('s') && value.hasOwnProperty('e'))) {
+                    return Number(value);
+                }
             }
-            return result;
-        }
+            return value;
+        });
 
-        return obj;
-    };
-
-    return NextResponse.json(serialize(data), { status });
+        return new NextResponse(json, {
+            status,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error: any) {
+        console.error('API_SUCCESS_SERIALIZATION_ERROR:', error);
+        return NextResponse.json(
+            { error: 'Internal Server Error (Serialization)', details: error.message },
+            { status: 500 }
+        );
+    }
 }
 
 /**
