@@ -96,9 +96,34 @@ export function apiError(
 
 /**
  * Standard JSON success response.
+ * Handles Decimal serialization by converting them to numbers.
  */
 export function apiSuccess<T>(data: T, status: number = 200): NextResponse {
-    return NextResponse.json(data, { status });
+    // Recursive function to find and convert Prisma Decimal objects
+    const serialize = (obj: any): any => {
+        if (obj === null || obj === undefined) return obj;
+
+        // Handle Prisma Decimal objects (which have a "toFixed" method and are objects)
+        if (typeof obj === 'object' && obj.constructor?.name === 'Decimal' || (obj.d && obj.s && obj.e)) {
+            return Number(obj);
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(serialize);
+        }
+
+        if (typeof obj === 'object') {
+            const result: any = {};
+            for (const key in obj) {
+                result[key] = serialize(obj[key]);
+            }
+            return result;
+        }
+
+        return obj;
+    };
+
+    return NextResponse.json(serialize(data), { status });
 }
 
 /**
