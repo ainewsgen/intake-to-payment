@@ -15,7 +15,7 @@ export async function GET(
         where: { id, tenantId: ctx.tenantId },
         include: {
             requests: { orderBy: { createdAt: 'desc' }, take: 10, include: { proposals: true } },
-            projects: { orderBy: { updatedAt: 'desc' }, include: { invoices: true } },
+            projects: { orderBy: { updatedAt: 'desc' }, include: { invoices: true, proposal: { select: { totalAmount: true } } } },
             clientUsers: true
         }
     });
@@ -26,14 +26,14 @@ export async function GET(
     let totalWip = 0;
     let unbilledAmounts = 0;
 
-    const pipeline = client.requests.filter(r => r.status !== 'CLOSED' && r.status !== 'CONVERTED');
+    const pipeline = client.requests.filter(r => r.status !== 'CLOSED');
     const pastProjects = client.projects.filter(p => p.status === 'COMPLETED');
     const activeProjects = client.projects.filter(p => p.status === 'ACTIVE');
 
     client.projects.forEach(p => {
         const invoicedAmount = p.invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
         totalBilled += invoicedAmount;
-        totalWip += Number(p.budgetAmount || 0);
+        totalWip += Number(p.proposal?.totalAmount || 0);
     });
 
     return apiSuccess({

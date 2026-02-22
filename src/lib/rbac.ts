@@ -48,7 +48,9 @@ export type Permission =
     | 'payroll:view-own'
     // OT
     | 'ot:request'
-    | 'ot:approve';
+    | 'ot:approve'
+    // Clients
+    | 'clients:view';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     ADMIN: [
@@ -84,6 +86,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'payroll:view-own',
         'ot:request',
         'ot:approve',
+        'clients:view',
     ],
     ESTIMATOR: [
         'requests:create',
@@ -98,6 +101,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'time:view',
         'time:log',
         'ot:request',
+        'clients:view',
     ],
     PM: [
         'requests:view',
