@@ -56,9 +56,11 @@ model User {
   firstName    String
   lastName     String
   role         UserRole
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive          Boolean        @default(true)
+  isSystemAdmin     Boolean        @default(false)
+  customPermissions String[]       @default([])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
 

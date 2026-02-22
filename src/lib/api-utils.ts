@@ -9,6 +9,8 @@ export interface ApiContext {
     userType: 'INTERNAL' | 'CLIENT';
     role: string;
     clientAccountId?: string;
+    isSystemAdmin: boolean;
+    customPermissions: string[];
 }
 
 /**
@@ -27,6 +29,8 @@ export async function getApiContext(
         userType: session.user.userType,
         role: session.user.role,
         clientAccountId: session.user.clientAccountId,
+        isSystemAdmin: session.user.isSystemAdmin,
+        customPermissions: session.user.customPermissions,
     };
 }
 
@@ -60,6 +64,24 @@ export async function requirePermissionApi(
     }
 
     if (!hasPermission(ctx.role as UserRole, permission)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    return ctx;
+}
+
+/**
+ * Require the user to be a System Admin.
+ */
+export async function requireSystemAdmin(
+    req: NextRequest
+): Promise<ApiContext | NextResponse> {
+    const result = await requireAuth(req);
+    if (result instanceof NextResponse) return result;
+
+    const ctx = result;
+
+    if (!ctx.isSystemAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

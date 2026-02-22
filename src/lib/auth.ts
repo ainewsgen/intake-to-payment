@@ -14,6 +14,8 @@ declare module 'next-auth' {
             role: string;
             userType: 'INTERNAL' | 'CLIENT';
             clientAccountId?: string;
+            isSystemAdmin: boolean;
+            customPermissions: string[];
         };
     }
 
@@ -26,6 +28,8 @@ declare module 'next-auth' {
         role: string;
         userType: 'INTERNAL' | 'CLIENT';
         clientAccountId?: string;
+        isSystemAdmin: boolean;
+        customPermissions: string[];
     }
 }
 
@@ -39,6 +43,8 @@ declare module 'next-auth' {
         role: string;
         userType: 'INTERNAL' | 'CLIENT';
         clientAccountId?: string;
+        isSystemAdmin: boolean;
+        customPermissions: string[];
     }
 }
 
@@ -88,6 +94,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     tenantId: user.tenantId,
                     role: user.role,
                     userType: 'INTERNAL' as const,
+                    isSystemAdmin: user.isSystemAdmin,
+                    customPermissions: user.customPermissions,
                 };
             },
         }),
@@ -136,6 +144,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     role: 'CLIENT',
                     userType: 'CLIENT' as const,
                     clientAccountId: clientUser.clientAccountId,
+                    isSystemAdmin: false,
+                    customPermissions: [],
                 };
             },
         }),
@@ -151,6 +161,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 token.role = user.role;
                 token.userType = user.userType;
                 token.clientAccountId = user.clientAccountId;
+                token.isSystemAdmin = user.isSystemAdmin;
+                token.customPermissions = user.customPermissions;
             }
             return token;
         },
@@ -166,6 +178,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: token.role as string,
                 userType: token.userType as 'INTERNAL' | 'CLIENT',
                 clientAccountId: token.clientAccountId as string | undefined,
+                isSystemAdmin: token.isSystemAdmin as boolean,
+                customPermissions: token.customPermissions as string[],
             } as any;
             return session;
         },

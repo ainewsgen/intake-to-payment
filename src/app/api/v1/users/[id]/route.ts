@@ -22,7 +22,7 @@ export async function PATCH(
     if (!existing) return apiError('User not found', 404);
 
     const body = await req.json();
-    const { role, isActive, firstName, lastName } = body;
+    const { role, isActive, firstName, lastName, customPermissions } = body;
 
     const validRoles = ['ADMIN', 'ESTIMATOR', 'PM', 'FINANCE', 'EMPLOYEE'];
     if (role && !validRoles.includes(role)) {
@@ -35,6 +35,7 @@ export async function PATCH(
     if (isActive !== undefined) data.isActive = isActive;
     if (firstName !== undefined) data.firstName = firstName;
     if (lastName !== undefined) data.lastName = lastName;
+    if (customPermissions !== undefined) data.customPermissions = customPermissions;
 
     const user = await prisma.user.update({
         where: { id, tenantId: ctx.tenantId },
@@ -46,6 +47,7 @@ export async function PATCH(
             lastName: true,
             role: true,
             isActive: true,
+            customPermissions: true,
         },
     });
 

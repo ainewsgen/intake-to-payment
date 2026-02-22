@@ -18,6 +18,29 @@ interface UserItem {
 const ROLES = ['ADMIN', 'ESTIMATOR', 'PM', 'FINANCE', 'EMPLOYEE'];
 const USER_TYPES = ['INTERNAL', 'CLIENT'];
 
+const PERMISSIONS_GROUPS = [
+    {
+        title: 'General',
+        items: ['tenant:manage', 'integrations:manage', 'users:manage', 'audit:view']
+    },
+    {
+        title: 'Requests & Proposals',
+        items: ['requests:create', 'requests:view', 'requests:edit', 'proposals:create', 'proposals:edit', 'proposals:approve', 'proposals:view']
+    },
+    {
+        title: 'Projects & Delivery',
+        items: ['projects:manage', 'projects:edit', 'projects:view', 'projects:assign', 'milestones:manage', 'documents:manage']
+    },
+    {
+        title: 'Time & Attendance',
+        items: ['time:view-all', 'time:view-own', 'time:view', 'time:log', 'time:approve', 'ot:request', 'ot:approve']
+    },
+    {
+        title: 'Finance & Payroll',
+        items: ['invoices:create', 'invoices:approve', 'invoices:view', 'payroll:manage', 'payroll:approve', 'payroll:view-own']
+    }
+];
+
 export default function UsersPage() {
     const [users, setUsers] = useState<UserItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +52,11 @@ export default function UsersPage() {
         email: '', firstName: '', lastName: '', role: 'EMPLOYEE', userType: 'INTERNAL', password: '',
     });
     const [formLoading, setFormLoading] = useState(false);
+
+    // Permission Modal State
+    const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
+    const [userPermissions, setUserPermissions] = useState<string[]>([]);
+    const [isSavingPermissions, setIsSavingPermissions] = useState(false);
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -76,6 +104,32 @@ export default function UsersPage() {
         });
         fetchUsers();
     }
+
+    const openPermissionsModal = (user: UserItem) => {
+        setSelectedUser(user);
+        // Assuming user.customPermissions is added to UserItem interface
+        // For now, let's cast or adjust the interface
+        setUserPermissions((user as any).customPermissions || []);
+    };
+
+    const savePermissions = async () => {
+        if (!selectedUser) return;
+        setIsSavingPermissions(true);
+        await fetch(`/api/v1/users/${selectedUser.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customPermissions: userPermissions }),
+        });
+        setIsSavingPermissions(false);
+        setSelectedUser(null);
+        fetchUsers();
+    };
+
+    const togglePermission = (perm: string) => {
+        setUserPermissions(prev =>
+            prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+        );
+    };
 
     return (
         <>
@@ -225,12 +279,20 @@ export default function UsersPage() {
                                             </td>
                                             <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                                             <td>
-                                                <button
-                                                    className={`btn btn-ghost btn-sm ${user.isActive ? styles.deactivateBtn : styles.activateBtn}`}
-                                                    onClick={() => toggleActive(user.id, user.isActive)}
-                                                >
-                                                    {user.isActive ? 'Disable' : 'Enable'}
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
+                                                        onClick={() => openPermissionsModal(user)}
+                                                    >
+                                                        Permissions
+                                                    </button>
+                                                    <button
+                                                        className={`btn btn-ghost btn-sm ${user.isActive ? styles.deactivateBtn : styles.activateBtn}`}
+                                                        onClick={() => toggleActive(user.id, user.isActive)}
+                                                    >
+                                                        {user.isActive ? 'Disable' : 'Enable'}
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -240,6 +302,50 @@ export default function UsersPage() {
                     </div>
                 )}
             </div>
+
+            {/* Permissions Modal */}
+            {selectedUser && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modal}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h2 className={styles.modalTitle}>Manage Permissions</h2>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setSelectedUser(null)}>✕</button>
+                        </div>
+
+                        <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
+                            Granting specific permissions to <strong>{selectedUser.firstName} {selectedUser.lastName}</strong>.
+                            These will override their default role ({selectedUser.role}).
+                        </p>
+
+                        {PERMISSIONS_GROUPS.map(group => (
+                            <div key={group.title} className={styles.permissionGroup}>
+                                <h4 className={styles.groupTitle}>{group.title}</h4>
+                                <div className={styles.permissionList}>
+                                    {group.items.map(perm => (
+                                        <div key={perm} className={styles.permissionItem}>
+                                            <input
+                                                type="checkbox"
+                                                id={perm}
+                                                checked={userPermissions.includes(perm)}
+                                                onChange={() => togglePermission(perm)}
+                                            />
+                                            <label htmlFor={perm} style={{ cursor: 'pointer' }}>{perm}</label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.5rem' }}>
+                            <button className="btn btn-ghost" onClick={() => setSelectedUser(null)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={savePermissions} disabled={isSavingPermissions}>
+                                {isSavingPermissions ? 'Saving...' : 'Save Permissions'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
+

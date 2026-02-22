@@ -51,11 +51,20 @@ const navSections: { label: string; items: NavItem[] }[] = [
     {
         label: 'Settings',
         items: [
+            { label: 'Organization', href: '/settings/organization', icon: '🏢' },
             { label: 'Users', href: '/settings/users', icon: '👥' },
             { label: 'Integrations', href: '/settings/integrations', icon: '🔗' },
         ],
     },
 ];
+
+const adminSection = {
+    label: 'System Admin',
+    items: [
+        { label: 'Organizations', href: '/admin/tenants', icon: '🌐' },
+        { label: 'Global Users', href: '/admin/users', icon: '👤' },
+    ],
+};
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -74,6 +83,24 @@ export default function Sidebar() {
             </div>
 
             <nav className="sidebar-nav">
+                {session?.user?.isSystemAdmin && (
+                    <div key="system-admin">
+                        <div className="sidebar-section-label">{adminSection.label}</div>
+                        {adminSection.items.map((item) => {
+                            const isActive = pathname.startsWith(item.href);
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`sidebar-link ${isActive ? 'active' : ''}`}
+                                >
+                                    <span className="sidebar-link-icon">{item.icon}</span>
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
                 {navSections.map((section) => (
                     <div key={section.label}>
                         <div className="sidebar-section-label">{section.label}</div>

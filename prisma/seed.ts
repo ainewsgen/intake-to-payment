@@ -39,6 +39,7 @@ async function main() {
             firstName: 'Admin',
             lastName: 'User',
             role: 'ADMIN',
+            isSystemAdmin: true,
         },
     });
     console.log('✅ Admin user:', admin.email);
