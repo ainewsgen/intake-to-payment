@@ -25,9 +25,13 @@ export default function RateCardsPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [form, setForm] = useState({
         name: '',
-        effectiveDate: new Date().toISOString().slice(0, 10),
+        effectiveDate: '',
         lines: [{ roleName: '', hourlyRate: 0, currency: 'USD' }],
     });
+
+    useEffect(() => {
+        setForm(f => ({ ...f, effectiveDate: new Date().toISOString().slice(0, 10) }));
+    }, []);
     const [formLoading, setFormLoading] = useState(false);
 
     const fetchCards = useCallback(async () => {
@@ -179,11 +183,11 @@ export default function RateCardsPage() {
                                     <div className={styles.cardInfo}>
                                         <h3>{card.name}</h3>
                                         <div className={styles.cardMeta}>
-                                            Effective {new Date(card.effectiveDate).toLocaleDateString()}
+                                            Effective {card.effectiveDate ? new Date(card.effectiveDate).toLocaleDateString() : '—'}
                                         </div>
                                     </div>
                                     <div className={styles.cardRight}>
-                                        <span className={styles.rateCount}>{card.lines.length} roles</span>
+                                        <span className={styles.rateCount}>{(card.lines || []).length} roles</span>
                                         <span className={`badge badge-${card.isActive ? 'completed' : 'draft'}`}>
                                             {card.isActive ? 'Active' : 'Inactive'}
                                         </span>
@@ -202,10 +206,10 @@ export default function RateCardsPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {card.lines.map((rate, idx) => (
+                                                {(card.lines || []).map((rate, idx) => (
                                                     <tr key={idx}>
                                                         <td>{rate.roleName}</td>
-                                                        <td className={styles.rateValue}>{formatRate(rate.hourlyRate)}</td>
+                                                        <td className={styles.rateValue}>{formatRate(rate.hourlyRate || 0)}</td>
                                                         <td>{rate.currency}</td>
                                                     </tr>
                                                 ))}
