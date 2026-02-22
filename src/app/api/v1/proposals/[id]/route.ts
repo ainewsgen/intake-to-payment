@@ -15,33 +15,38 @@ export async function GET(
     const ctx = result;
     const { id } = await params;
 
-    const proposal = await prisma.proposal.findFirst({
-        where: { id, tenantId: ctx.tenantId },
-        include: {
-            request: {
-                select: { id: true, title: true, clientName: true, source: true },
-                include: {
-                    clientAccount: { select: { id: true, name: true } },
+    try {
+        const proposal = await prisma.proposal.findFirst({
+            where: { id, tenantId: ctx.tenantId },
+            include: {
+                request: {
+                    select: { id: true, title: true, clientName: true, source: true },
+                    include: {
+                        clientAccount: { select: { id: true, name: true } },
+                    },
+                },
+                jobs: {
+                    orderBy: { sortOrder: 'asc' },
+                    include: { estimates: true },
+                },
+                approvals: {
+                    orderBy: { createdAt: 'desc' },
+                    include: {
+                        approvedBy: { select: { firstName: true, lastName: true } },
+                    },
                 },
             },
-            jobs: {
-                orderBy: { sortOrder: 'asc' },
-                include: { estimates: true },
-            },
-            approvals: {
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    approvedBy: { select: { firstName: true, lastName: true } },
-                },
-            },
-        },
-    });
+        });
 
-    if (!proposal) {
-        return apiError('Proposal not found', 404);
+        if (!proposal) {
+            return apiError('Proposal not found', 404);
+        }
+
+        return apiSuccess({ data: proposal });
+    } catch (error: any) {
+        console.error('DEBUG PROPOSAL GET ERROR:', error);
+        return apiError(`Server Error: ${error.message || 'Unknown error'}`, 500);
     }
-
-    return apiSuccess({ data: proposal });
 }
 
 /**
