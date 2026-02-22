@@ -20,8 +20,11 @@ export async function GET(
             where: { id, tenantId: ctx.tenantId },
             include: {
                 request: {
-                    select: { id: true, title: true, clientName: true, source: true },
-                    include: {
+                    select: {
+                        id: true,
+                        title: true,
+                        clientName: true,
+                        source: true,
                         clientAccount: { select: { id: true, name: true } },
                     },
                 },
