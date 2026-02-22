@@ -1,9 +1,15 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
+import 'dotenv/config';
 
 const prisma = new PrismaClient();
 
 async function main() {
+    console.log('DEBUG: DATABASE_URL presence:', !!process.env.DATABASE_URL);
+    if (!process.env.DATABASE_URL) {
+        console.error('ERROR: DATABASE_URL is not defined in the environment.');
+    }
+
     console.log('🌱 Seeding database...');
 
     // Create tenant
@@ -21,7 +27,7 @@ async function main() {
     console.log('✅ Tenant created:', tenant.slug);
 
     // Create users
-    const passwordHash = await bcrypt.hash('password123', 10);
+    const passwordHash = await bcryptjs.hash('password123', 10);
 
     const admin = await prisma.user.upsert({
         where: { tenantId_email: { tenantId: tenant.id, email: 'admin@demo.com' } },
